@@ -6,56 +6,45 @@
 /* appearance */
 static const int sloppyfocus               = 1;  /* focus follows mouse */
 static const int bypass_surface_visibility = 0;  /* 1 means idle inhibitors will disable idle tracking even if it's surface isn't visible  */
-static const int smartgaps                 = 0; /* 1 means no outer gaps when there is only one window */
-static int gaps                            = 1; /* 1 means gaps between windows are added */
-static const unsigned int gappx            = 10; /* gap pixel between windows */
-static const unsigned int borderpx         = 1;  /* border pixel of windows & bar */
+static const unsigned int borderpx         = 1;  /* border pixel of windows */
+static const int showbar                   = 1; /* 0 means no bar */
+static const int topbar                    = 1; /* 0 means bottom bar */
+static const char *fonts[]                 = {"JetbrainsMono Nerd Font:size=12"};
 static const float rootcolor[]             = COLOR(0x000000ff);
-static const float bordercolor[]           = COLOR(0x444444ff);
-static const float focuscolor[]            = COLOR(0x005577ff);
-static const float urgentcolor[]           = COLOR(0xff0000ff);
 /* This conforms to the xdg-protocol. Set the alpha to zero to restore the old behavior */
 static const float fullscreen_bg[]         = {0.1f, 0.1f, 0.1f, 1.0f}; /* You can also use glsl colors */
-static const int center_relative_to_monitor = 1;  /* 0 means center floating relative to the window area  */
-static const char cursortheme[]             = "/usr/share/cursors/xorg-x11/Adwaita";
-static const unsigned int cursorsize        = 24;
-
-/* bar */
-static const int showbar        = 1; /* 0 means no bar */
-static const int topbar         = 1; /* 0 means bottom bar */
-static const int vertpad        = 10; /* vertical padding of bar */
-static const int sidepad        = 10; /* horizontal padding of bar */
-static const char *fonts[]      = {"monospace:size=10"};
-static const char *fontattrs    = "dpi=96";
-static pixman_color_t borderbar = { 0x5555, 0x7777, 0x0000, 0xffff };
-static pixman_color_t normbarfg = { 0xbbbb, 0xbbbb, 0xbbbb, 0xffff };
-static pixman_color_t normbarbg = { 0x2222, 0x2222, 0x2222, 0xffff };
-static pixman_color_t selbarfg  = { 0xeeee, 0xeeee, 0xeeee, 0xffff };
-static pixman_color_t selbarbg  = { 0x0000, 0x5555, 0x7777, 0xffff };
+static uint32_t colors[][3]                = {
+	/*               fg          bg          border    */
+	[SchemeNorm] = { 0xbbbbbbff, 0x222222ff, 0x444444ff },
+	[SchemeSel]  = { 0xeeeeeeff, 0x005577ff, 0x005577ff },
+	[SchemeUrg]  = { 0,          0,          0x770000ff },
+};
 
 /* tagging - TAGCOUNT must be no greater than 31 */
 #define TAGCOUNT (9)
 static char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
 
-/* Autostart */
-static const char *const autostart[] = {
-    "wbg", "your/awesome/wallpaper.{jpg,png}", NULL
-    "telegram-desktop", "-startintray", NULL,
-    NULL /* terminate */
-};
-
 /* logging */
 static int log_level = WLR_ERROR;
+
+/* Autostart */
+static const char *const autostart[] = {
+	"gentoo-pipewire-launcher", "restart", NULL,
+	"wbg", "/home/brayan/Wallpapers/360290.jpg", NULL,
+        NULL /* terminate */
+};
 
 static const Env envs[] = {
 	/* variable			value */
 	{ "XDG_CURRENT_DESKTOP",	"wlroots" },
 };
 
+/* NOTE: ALWAYS keep a rule declared even if you don't use rules (e.g leave at least one example) */
 static const Rule rules[] = {
 	/* app_id             title       tags mask     isfloating   monitor */
 	/* examples: */
-	{ "firefox",          NULL,         1,              0,           -1 }, /* Start on ONLY tag "9" */
+	{ "Gimp_EXAMPLE",     NULL,       0,            1,           -1 }, /* Start on currently visible tags floating, not tiled */
+	{ "firefox_EXAMPLE",  NULL,       1 << 8,       0,           -1 }, /* Start on ONLY tag "9" */
 };
 
 /* layout(s) */
@@ -67,6 +56,10 @@ static const Layout layouts[] = {
 };
 
 /* monitors */
+/* (x=-1, y=-1) is reserved as an "autoconfigure" monitor position indicator
+ * WARNING: negative values other than (-1, -1) cause problems with Xwayland clients
+ * https://gitlab.freedesktop.org/xorg/xserver/-/issues/899
+*/
 /* NOTE: ALWAYS add a fallback rule, even if you are completely sure it won't be used */
 static const MonitorRule monrules[] = {
 	/* name       mfact  nmaster scale layout       rotate/reflect                x    y */
@@ -83,8 +76,8 @@ static const struct xkb_rule_names xkb_rules = {
 	/* example:
 	.options = "ctrl:nocaps",
 	*/
-    .layout = "us",
-    .variant = "intl",
+	.layout = "us",
+	.variant = "intl",
 	.options = NULL,
 };
 
@@ -95,7 +88,7 @@ static const int repeat_delay = 600;
 static const int tap_to_click = 1;
 static const int tap_and_drag = 1;
 static const int drag_lock = 1;
-static const int natural_scrolling = 0;
+static const int natural_scrolling = 1;
 static const int disable_while_typing = 1;
 static const int left_handed = 0;
 static const int middle_button_emulation = 0;
@@ -147,11 +140,46 @@ static const enum libinput_config_tap_button_map button_map = LIBINPUT_CONFIG_TA
 #define SHCMD(cmd) { .v = (const char*[]){ "/bin/sh", "-c", cmd, NULL } }
 
 /* commands */
-static const char *termcmd[] = { "konsole", NULL };
-static const char *menucmd[] = {
-    "bemenu-run", "-l", "30", "-c", "-B", "2", "-i", "--counter", "-p", "Program >",
-    NULL
+static const char *termcmd[] = { "alacritty", NULL };
+static const char *menucmd[] = { "wmenu-run", NULL };
+static const char *webbrowser[] = { "firefox", NULL };
+static const char *privatebrowser[] = { "firefox", "--private-window", NULL };
+static const char *telegram[] = { "telegram-desktop", NULL };
+
+/* Multimedia commands */
+static const char *volup5[] = {
+    "wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@",
+    "0.05+", NULL
 };
+
+static const char *volup10[] = {
+    "wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@",
+    "0.10+", NULL
+};
+
+static const char *voldown5[] = {
+    "wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@",
+    "0.05-", NULL
+};
+
+static const char *voldown10[] = {
+    "wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@",
+    "0.10-", NULL
+};
+
+static const char *mute[] = {
+    "wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@",
+    "toggle", NULL
+};
+
+static const char *mutemic[] = {
+    "wpctl", "set-mute", "@DEFAULT_AUDIO_SOURCE@",
+    "toggle", NULL
+};
+
+/* Brightness commands */
+static const char *brightness_up[] = { "", NULL };
+static const char *brightness_down[] = { "", NULL };
 
 static const Key keys[] = {
 	/* Note that Shift changes certain key codes: c -> C, 2 -> at, etc. */
@@ -167,7 +195,6 @@ static const Key keys[] = {
 	{ MODKEY,                    XKB_KEY_l,          setmfact,       {.f = +0.05f} },
 	{ MODKEY,                    XKB_KEY_Return,     zoom,           {0} },
 	{ MODKEY,                    XKB_KEY_Tab,        view,           {0} },
-    { MODKEY,                    XKB_KEY_g,          togglegaps,     {0} },
 	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_Q,          killclient,     {0} },
 	{ MODKEY,                    XKB_KEY_t,          setlayout,      {.v = &layouts[0]} },
 	{ MODKEY,                    XKB_KEY_f,          setlayout,      {.v = &layouts[1]} },
@@ -175,7 +202,6 @@ static const Key keys[] = {
 	{ MODKEY,                    XKB_KEY_space,      setlayout,      {0} },
 	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_space,      togglefloating, {0} },
 	{ MODKEY,                    XKB_KEY_e,         togglefullscreen, {0} },
-    { MODKEY,                    XKB_KEY_x,          movecenter,     {0} },
 	{ MODKEY,                    XKB_KEY_0,          view,           {.ui = ~0} },
 	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_parenright, tag,            {.ui = ~0} },
 	{ MODKEY,                    XKB_KEY_comma,      focusmon,       {.i = WLR_DIRECTION_LEFT} },
@@ -192,9 +218,20 @@ static const Key keys[] = {
 	TAGKEYS(          XKB_KEY_8, XKB_KEY_asterisk,                   7),
 	TAGKEYS(          XKB_KEY_9, XKB_KEY_parenleft,                  8),
 	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_E,          quit,           {0} },
-
-    { MODKEY,                    XKB_KEY_w,          spawn,          SHCMD("firefox") },
-    { MODKEY,                    XKB_KEY_c,          spawn,          SHCMD("google-chrome-stable --ozone-platform=wayland") },
+	/* Multimedia shortcuts */
+	{ 0,			     XKB_KEY_XF86AudioRaiseVolume,	spawn,	{.v = volup5} },
+	{ WLR_MODIFIER_SHIFT,	     XKB_KEY_XF86AudioRaiseVolume,	spawn,	{.v = volup10} },
+	{ 0, 			     XKB_KEY_XF86AudioLowerVolume,	spawn,	{.v = voldown5} },
+	{ WLR_MODIFIER_SHIFT,	     XKB_KEY_XF86AudioLowerVolume,	spawn,	{.v = voldown10} },
+	{ 0,			     XKB_KEY_XF86AudioMute,		spawn,	{.v = mute} },
+	{ 0, 			     XKB_KEY_XF86AudioMicMute,		spawn,	{.v = mutemic} },
+	/* Brightness control */
+	{ 0,			     XKB_KEY_XF86MonBrightnessUp,	spawn,	{.v = brightness_up } },
+	{ 0,			     XKB_KEY_XF86MonBrightnessDown,	spawn,	{.v = brightness_down } },
+	/* GUI Programs */
+	{ MODKEY,		     XKB_KEY_w,		 spawn,		{.v = webbrowser} },
+	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_W,		 spawn,		{.v = privatebrowser} },
+	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_T,		 spawn,		{.v = telegram} },
 
 	/* Ctrl-Alt-Backspace and Ctrl-Alt-Fx used to be handled by X server */
 	{ WLR_MODIFIER_CTRL|WLR_MODIFIER_ALT,XKB_KEY_Terminate_Server, quit, {0} },
