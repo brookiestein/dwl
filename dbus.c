@@ -1,39 +1,46 @@
 #include "dbus.h"
 
+#include "util.h"
+
 #include <dbus/dbus.h>
+#include <stdlib.h>
 #include <wayland-server-core.h>
 
+#include <fcntl.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-#if defined __linux__
-#include <sys/eventfd.h>
-#elif defined(__FreeBSD__) || defined(__OpenBSD__)
-#include <sys/event.h>
-#endif
 #include <unistd.h>
 
-int efd = -1;
+static void
+close_pipe(void *data)
+{
+	int *pipefd = data;
+
+	close(pipefd[0]);
+	close(pipefd[1]);
+	free(pipefd);
+}
 
 static int
 dwl_dbus_dispatch(int fd, unsigned int mask, void *data)
 {
 	DBusConnection *conn = data;
 
-	uint64_t dispatch_pending;
-	DBusDispatchStatus status;
+	int pending;
+	DBusDispatchStatus oldstatus, newstatus;
 
-	status = dbus_connection_dispatch(conn);
+	oldstatus = dbus_connection_get_dispatch_status(conn);
+	newstatus = dbus_connection_dispatch(conn);
 
-	/*
-	 * Don't clear pending flag if message queue wasn't
-	 * fully drained
-	 */
-	if (status != DBUS_DISPATCH_COMPLETE)
+	/* Don't clear pending flag if status didn't change */
+	if (oldstatus == newstatus)
 		return 0;
 
-	if (read(fd, &dispatch_pending, sizeof(uint64_t)) < 0)
+	if (read(fd, &pending, sizeof(int)) < 0) {
 		perror("read");
+		die("Error in dbus dispatch");
+	}
 
 	return 0;
 }
@@ -122,8 +129,8 @@ dwl_dbus_add_timeout(DBusTimeout *timeout, void *data)
 
 	interval = dbus_timeout_get_interval(timeout);
 
-	timeout_source = wl_event_loop_add_timer(
-		loop, dwl_dbus_timeout_handle, timeout);
+	timeout_source =
+		wl_event_loop_add_timer(loop, dwl_dbus_timeout_handle, timeout);
 
 	r = wl_event_source_timer_update(timeout_source, interval);
 	if (r < 0) {
@@ -150,77 +157,74 @@ dwl_dbus_remove_timeout(DBusTimeout *timeout, void *data)
 }
 
 static void
-dwl_dbus_adjust_timeout(DBusTimeout *timeout, void *data)
+dwl_dbus_dispatch_status(DBusConnection *conn, DBusDispatchStatus status,
+                         void *data)
 {
-	int interval;
-	struct wl_event_source *timeout_source;
+	int *pipefd = data;
 
-	timeout_source = dbus_timeout_get_data(timeout);
-
-	if (timeout_source) {
-		interval = dbus_timeout_get_interval(timeout);
-		wl_event_source_timer_update(timeout_source, interval);
-	}
-}
-
-static void
-dwl_dbus_dispatch_status(DBusConnection *conn, DBusDispatchStatus status, void *data)
-{
-	if (status == DBUS_DISPATCH_DATA_REMAINS) {
-		uint64_t dispatch_pending = 1;
-		if (write(efd, &dispatch_pending, sizeof(uint64_t)) < 0)
+	if (status != DBUS_DISPATCH_COMPLETE) {
+		int pending = 1;
+		if (write(pipefd[1], &pending, sizeof(int)) < 0) {
 			perror("write");
+			die("Error in dispatch status");
+		}
 	}
 }
 
 struct wl_event_source *
 startbus(DBusConnection *conn, struct wl_event_loop *loop)
 {
+	int *pipefd;
+	int pending = 1, flags;
 	struct wl_event_source *bus_source = NULL;
-	uint64_t dispatch_pending = 1;
+
+	pipefd = ecalloc(2, sizeof(int));
+
+	/*
+	 * Libdbus forbids calling dbus_connection_dipatch from the
+	 * DBusDispatchStatusFunction directly. Notify the event loop of
+	 * updates via a self-pipe.
+	 */
+	if (pipe(pipefd) < 0)
+		goto fail;
+	if (((flags = fcntl(pipefd[0], F_GETFD)) < 0) ||
+	    fcntl(pipefd[0], F_SETFD, flags | FD_CLOEXEC) < 0 ||
+	    ((flags = fcntl(pipefd[1], F_GETFD)) < 0) ||
+	    fcntl(pipefd[1], F_SETFD, flags | FD_CLOEXEC) < 0) {
+		goto fail;
+	}
 
 	dbus_connection_set_exit_on_disconnect(conn, FALSE);
 
-#if defined __linux__
-	efd = eventfd(0, EFD_CLOEXEC);
-#elif defined(__FreeBSD__) || defined(__OpenBSD__)
-	efd = kqueue();
-#endif
-	if (efd < 0)
-		goto fail;
-
-	dbus_connection_set_dispatch_status_function(conn, dwl_dbus_dispatch_status, NULL, NULL);
-
-	if (!dbus_connection_set_watch_functions(conn, dwl_dbus_add_watch,
-	                                         dwl_dbus_remove_watch,
-	                                         NULL, loop, NULL)) {
-		goto fail;
-	}
-
-	if (!dbus_connection_set_timeout_functions(
-		    conn, dwl_dbus_add_timeout, dwl_dbus_remove_timeout,
-		    dwl_dbus_adjust_timeout, loop, NULL)) {
-		goto fail;
-	}
-
-	bus_source = wl_event_loop_add_fd(loop, efd, WL_EVENT_READABLE, dwl_dbus_dispatch, conn);
+	bus_source = wl_event_loop_add_fd(loop, pipefd[0], WL_EVENT_READABLE,
+	                                  dwl_dbus_dispatch, conn);
 	if (!bus_source)
 		goto fail;
 
-	if (dbus_connection_get_dispatch_status(conn) == DBUS_DISPATCH_DATA_REMAINS)
-		if (write(efd, &dispatch_pending, sizeof(uint64_t)) < 0)
-			perror("write");
+	dbus_connection_set_dispatch_status_function(conn,
+	                                             dwl_dbus_dispatch_status,
+	                                             pipefd, close_pipe);
+	if (!dbus_connection_set_watch_functions(conn, dwl_dbus_add_watch,
+	                                         dwl_dbus_remove_watch, NULL,
+	                                         loop, NULL)) {
+		goto fail;
+	}
+	if (!dbus_connection_set_timeout_functions(conn, dwl_dbus_add_timeout,
+	                                           dwl_dbus_remove_timeout,
+	                                           NULL, loop, NULL)) {
+		goto fail;
+	}
+	if (dbus_connection_get_dispatch_status(conn) != DBUS_DISPATCH_COMPLETE)
+		if (write(pipefd[1], &pending, sizeof(int)) < 0)
+			goto fail;
 
 	return bus_source;
 
 fail:
 	if (bus_source)
 		wl_event_source_remove(bus_source);
-	if (efd >= 0) {
-		close(efd);
-		efd = -1;
-	}
-	dbus_connection_set_timeout_functions(conn, NULL, NULL, NULL, NULL, NULL);
+	dbus_connection_set_timeout_functions(conn, NULL, NULL, NULL, NULL,
+	                                      NULL);
 	dbus_connection_set_watch_functions(conn, NULL, NULL, NULL, NULL, NULL);
 	dbus_connection_set_dispatch_status_function(conn, NULL, NULL, NULL);
 
@@ -231,10 +235,8 @@ void
 stopbus(DBusConnection *conn, struct wl_event_source *bus_source)
 {
 	wl_event_source_remove(bus_source);
-	close(efd);
-	efd = -1;
-
 	dbus_connection_set_watch_functions(conn, NULL, NULL, NULL, NULL, NULL);
-	dbus_connection_set_timeout_functions(conn, NULL, NULL, NULL, NULL, NULL);
+	dbus_connection_set_timeout_functions(conn, NULL, NULL, NULL, NULL,
+	                                      NULL);
 	dbus_connection_set_dispatch_status_function(conn, NULL, NULL, NULL);
 }

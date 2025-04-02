@@ -12,18 +12,29 @@ DWLDEVCFLAGS = -g -pedantic -Wall -Wextra -Wdeclaration-after-statement \
 	-Wfloat-conversion
 
 # CFLAGS / LDFLAGS
-PKGS      = wlroots-0.18 wayland-server xkbcommon libinput pixman-1 fcft $(XLIBS)
+PKGS      = wlroots-0.18 wayland-server xkbcommon libinput pixman-1 fcft $(XLIBS) dbus-1
 DWLCFLAGS = `$(PKG_CONFIG) --cflags $(PKGS)` $(DWLCPPFLAGS) $(DWLDEVCFLAGS) $(CFLAGS)
 LDLIBS    = `$(PKG_CONFIG) --libs $(PKGS)` -lm $(LIBS)
 
+TRAYOBJS = systray/watcher.o systray/tray.o systray/item.o systray/icon.o systray/menu.o systray/helpers.o
+TRAYDEPS = systray/watcher.h systray/tray.h systray/item.h systray/icon.h systray/menu.h systray/helpers.h
+
 all: dwl
-dwl: dwl.o util.o dwl-ipc-unstable-v2-protocol.o
-	$(CC) dwl.o util.o dwl-ipc-unstable-v2-protocol.o $(DWLCFLAGS) $(LDFLAGS) $(LDLIBS) -o $@
-dwl.o: dwl.c client.h config.h config.mk cursor-shape-v1-protocol.h \
+dwl: dwl.o util.o dbus.o dwl-ipc-unstable-v2-protocol.o $(TRAYOBJS) $(TRAYDEPS)
+	$(CC) dwl.o util.o dbus.o dwl-ipc-unstable-v2-protocol.o $(TRAYOBJS) $(DWLCFLAGS) $(LDFLAGS) $(LDLIBS) -o $@
+dwl.o: dwl.c client.h dbus.h config.h config.mk cursor-shape-v1-protocol.h \
 	pointer-constraints-unstable-v1-protocol.h wlr-layer-shell-unstable-v1-protocol.h \
 	wlr-output-power-management-unstable-v1-protocol.h xdg-shell-protocol.h \
+	$(TRAYDEPS) \
 	dwl-ipc-unstable-v2-protocol.h
 util.o: util.c util.h
+dbus.o: dbus.c dbus.h
+systray/watcher.o: systray/watcher.c $(TRAYDEPS)
+systray/tray.o: systray/tray.c $(TRAYDEPS)
+systray/item.o: systray/item.c $(TRAYDEPS)
+systray/icon.o: systray/icon.c $(TRAYDEPS)
+systray/menu.o: systray/menu.c $(TRAYDEPS)
+systray/helpers.o: systray/helpers.c $(TRAYDEPS)
 dwl-ipc-unstable-v2-protocol.o: dwl-ipc-unstable-v2-protocol.c dwl-ipc-unstable-v2-protocol.h
 
 # wayland-scanner is a tool which generates C headers and rigging for Wayland
@@ -57,7 +68,7 @@ dwl-ipc-unstable-v2-protocol.c:
 config.h:
 	cp config.def.h $@
 clean:
-	rm -f dwl *.o *-protocol.h
+	rm -f dwl *.o *-protocol.h systray/*.o
 
 dist: clean
 	mkdir -p dwl-$(VERSION)

@@ -26,8 +26,9 @@ static const char *cursor_theme		   = "Adwaita";
 static const char cursor_size[]		   = "16";
 
 /* tagging - TAGCOUNT must be no greater than 31 */
-#define TAGCOUNT (9)
 static char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
+/* Casted to int beacuse tags in dwl.c is an int. Just to shut the compiler up. */
+#define TAGCOUNT (int) LENGTH(tags)
 
 /* logging */
 static int log_level = WLR_ERROR;
@@ -35,7 +36,7 @@ static int log_level = WLR_ERROR;
 /* Autostart */
 static const char *const autostart[] = {
 	 "wbg", "/home/brayan/Wallpapers/wallhaven-5g1868_1920x1080.png", NULL,
-	 /* "waybar", NULL, */
+	 "dbus-update-activation-environment", "--all", NULL,
 	 "gentoo-pipewire-launcher", "restart", NULL,
 	 "/usr/libexec/xdg-desktop-portal-wlr", NULL,
 	 "/usr/libexec/xdg-desktop-portal", NULL,
@@ -160,6 +161,7 @@ static const enum libinput_config_tap_button_map button_map = LIBINPUT_CONFIG_TA
 /* commands */
 static const char *termcmd[] = { "alacritty", NULL };
 static const char *menucmd[] = { "wmenu-run", "-l", "20", "-p", "Run:", NULL };
+static const char *dmenucmd[]= { "wmenu", NULL };
 static const char *suspend[] = { "spm", "--suspend", NULL };
 static const char *locker[] = {
 	 "swaylock", "-f",
@@ -283,4 +285,6 @@ static const Button buttons[] = {
 	{ ClkTagBar,   0,      BTN_RIGHT,  toggleview,     {0} },
 	{ ClkTagBar,   MODKEY, BTN_LEFT,   tag,            {0} },
 	{ ClkTagBar,   MODKEY, BTN_RIGHT,  toggletag,      {0} },
+	{ ClkTray,     0,      BTN_LEFT,   trayactivate,   {0} },
+	{ ClkTray,     0,      BTN_RIGHT,  traymenu,       {0} },
 };
