@@ -56,9 +56,12 @@ static const Env envs[] = {
 /* NOTE: ALWAYS keep a rule declared even if you don't use rules (e.g leave at least one example) */
 static const Rule rules[] = {
 	/* app_id             title       tags mask     isfloating   monitor */
-	/* examples: */
-	{ "Gimp_EXAMPLE",     NULL,       0,            1,           -1 }, /* Start on currently visible tags floating, not tiled */
-	{ "firefox_EXAMPLE",  NULL,       1 << 8,       0,           -1 }, /* Start on ONLY tag "9" */
+	/* Floating windows */
+	{ "floating",         NULL,       0,            1,           -1 },
+	{ "floating_update",  NULL,       0,            1,           -1 },
+	{ "firefox",          "Library",  0,            1,           -1 },
+	{ NULL, "About Mozilla Firefox",  0,            1,           -1 },
+	{ NULL, "Administrator privileges required", 0, 1, -1 },
 };
 
 /* layout(s) */
@@ -161,7 +164,14 @@ static const enum libinput_config_tap_button_map button_map = LIBINPUT_CONFIG_TA
 /* commands */
 static const char *termcmd[] = { "alacritty", NULL };
 static const char *menucmd[] = { "wmenu-run", "-l", "20", "-p", "Run:", NULL };
-static const char *dmenucmd[]= { "wmenu", NULL };
+static const char *dmenucmd[] = { "wmenu", NULL };
+
+static const char *printscr[] = { "grim", "$(xdg-user-dir Pictures)/Screenshot_$(date +\"%F_%T\").png", NULL };
+static const char *printrect[] = { "grim", "-g", "$(slurp)", "$(xdg-user-dir Pictures)/Screenshot_$(date +\"%F_%T\").png" };
+
+static const char *printscr_to_clipboard[] = { "grim", "-", "|", "wl-copy", NULL };
+static const char *printrect_to_clipboard[] = { "grim", "-g", "$(slurp)", "-", "|", "wl-copy", NULL };
+
 static const char *suspend[] = { "spm", "--suspend", NULL };
 static const char *locker[] = {
 	 "swaylock", "-f",
@@ -257,6 +267,11 @@ static const Key keys[] = {
 	{ WLR_MODIFIER_SHIFT,	     XKB_KEY_XF86AudioLowerVolume,	spawn,	{.v = voldown10} },
 	{ 0,			             XKB_KEY_XF86AudioMute,		    spawn,	{.v = mute} },
 	{ 0, 			             XKB_KEY_XF86AudioMicMute,		spawn,	{.v = mutemic} },
+	{ 0,                         XKB_KEY_Print,                 spawn,  {.v = printscr} },
+	{ WLR_MODIFIER_SHIFT,        XKB_KEY_Print,                 spawn,  {.v = printrect} },
+	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_Print,                 spawn,  {.v = printscr_to_clipboard} },
+	{ MODKEY|WLR_MODIFIER_CTRL,  XKB_KEY_Print,                 spawn,  {.v = printrect_to_clipboard} },
+
 	/* Brightness control */
 	{ 0,			             XKB_KEY_XF86MonBrightnessUp,	spawn,	{.v = brightness_up} },
 	{ 0,			             XKB_KEY_XF86MonBrightnessDown,	spawn,	{.v = brightness_down} },
