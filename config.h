@@ -51,7 +51,7 @@ static const Env envs[] = {
 	{ "MOZ_ENABLE_WAYLAND",		"1" },
 	{ "LD_LIBRARY_PATH",        "${LD_LIBRARY_PATH}:/usr/local/lib64" },
 	{ "CMAKE_PREFIX_PATH",      "${CMAKE_PREFIX_PATH}:/usr/local/lib64/cmake" },
-	{ "PKG_CONFIG_PATH",        "${PKG_CONFIG_PATH}:/usr/local/share/pkgconfig" }
+	{ "PKG_CONFIG_PATH",        "${PKG_CONFIG_PATH}:/usr/local/share/pkgconfig" },
 };
 
 /* NOTE: ALWAYS keep a rule declared even if you don't use rules (e.g leave at least one example) */
@@ -62,7 +62,7 @@ static const Rule rules[] = {
 	{ "floating_update",  NULL,       0,            1,           -1 },
 	{ "firefox",          "Library",  0,            1,           -1 },
 	{ NULL, "About Mozilla Firefox",  0,            1,           -1 },
-	{ NULL, "Administrator privileges required", 0, 1, -1 },
+	{ NULL, "Administrator privileges required", 0, 1,           -1 },
 };
 
 /* layout(s) */
@@ -163,15 +163,15 @@ static const enum libinput_config_tap_button_map button_map = LIBINPUT_CONFIG_TA
 #define SHCMD(cmd) { .v = (const char*[]){ "/bin/sh", "-c", cmd, NULL } }
 
 /* commands */
-static const char *termcmd[] = { "emacsclient", "-c", "-n", "-e", "'(vterm)'", NULL };
+static const char *termcmd[] = { "emacsclient", "-c", "-n", "-e", "(my/vterm-in-current-frame)", NULL };
 static const char *menucmd[] = { "wmenu-run", "-l", "20", "-p", "Run:", NULL };
 static const char *dmenucmd[] = { "wmenu", NULL };
 
-static const char *printscr[] = { "grim", "$(xdg-user-dir Pictures)/Screenshot_$(date +\"%F_%T\").png", NULL };
-static const char *printrect[] = { "grim", "-g", "$(slurp)", "$(xdg-user-dir Pictures)/Screenshot_$(date +\"%F_%T\").png" };
+static const char *printscr[] = { "grim", "$(xdg-user-dir PICTURES)/Screenshot_$(date +%F_%T).png", NULL };
+static const char *printrect[] = { "slurp", "|", "grim", "-g", "-", "$(xdg-user-dir PICTURES)/Screenshot_$(date +%F_%T).png", NULL };
 
 static const char *printscr_to_clipboard[] = { "grim", "-", "|", "wl-copy", NULL };
-static const char *printrect_to_clipboard[] = { "grim", "-g", "$(slurp)", "-", "|", "wl-copy", NULL };
+static const char *printrect_to_clipboard[] = { "slurp", "|", "grim", "-g", "-", "|", "wl-copy", NULL };
 
 static const char *suspend[] = { "spm", "--suspend", NULL };
 static const char *locker[] = {
