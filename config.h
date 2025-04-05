@@ -41,6 +41,7 @@ static const char *const autostart[] = {
 	 "/usr/libexec/xdg-desktop-portal-wlr", NULL,
 	 "/usr/libexec/xdg-desktop-portal", NULL,
 	 "dunst", NULL,
+	 "emacs", "--daemon", NULL,
      NULL /* terminate */
 };
 
@@ -162,7 +163,7 @@ static const enum libinput_config_tap_button_map button_map = LIBINPUT_CONFIG_TA
 #define SHCMD(cmd) { .v = (const char*[]){ "/bin/sh", "-c", cmd, NULL } }
 
 /* commands */
-static const char *termcmd[] = { "alacritty", NULL };
+static const char *termcmd[] = { "emacsclient", "-c", "-n", "-e", "'(vterm)'", NULL };
 static const char *menucmd[] = { "wmenu-run", "-l", "20", "-p", "Run:", NULL };
 static const char *dmenucmd[] = { "wmenu", NULL };
 
