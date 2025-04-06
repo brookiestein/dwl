@@ -25,6 +25,8 @@ static const int respect_monitor_reserved_area = 0;  /* 1 to monitor center whil
 static const char *cursor_theme            = NULL;
 static const char cursor_size[]            = "24"; /* Make sure it's a valid integer, otherwise things will break */
 
+static const unsigned int swipe_min_threshold = 0;
+
 /* tagging - TAGCOUNT must be no greater than 31 */
 //#define TAGCOUNT (9)
 static char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
@@ -149,6 +151,8 @@ static const char *termcmd[] = { "foot", NULL };
 static const char *menucmd[] = { "wmenu-run", NULL };
 static const char *dmenucmd[] = { "wmenu", NULL };
 
+#include "shiftview.c"
+
 static const Key keys[] = {
 	/* Note that Shift changes certain key codes: c -> C, 2 -> at, etc. */
 	/* modifier                  key                 function        argument */
@@ -163,6 +167,8 @@ static const Key keys[] = {
 	{ MODKEY,                    XKB_KEY_l,          setmfact,       {.f = +0.05f} },
 	{ MODKEY,                    XKB_KEY_Return,     zoom,           {0} },
 	{ MODKEY,                    XKB_KEY_Tab,        view,           {0} },
+	{ MODKEY,                    XKB_KEY_a,          shiftview,      { .i = -1 } },
+	{ MODKEY,                    XKB_KEY_semicolon,  shiftview,      { .i = 1 } },
 	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_C,          killclient,     {0} },
 	{ MODKEY,                    XKB_KEY_t,          setlayout,      {.v = &layouts[0]} },
 	{ MODKEY,                    XKB_KEY_f,          setlayout,      {.v = &layouts[1]} },
@@ -214,4 +220,11 @@ static const Button buttons[] = {
 	{ ClkTagBar,   MODKEY, BTN_RIGHT,  toggletag,      {0} },
 	{ ClkTray,     0,      BTN_LEFT,   trayactivate,   {0} },
 	{ ClkTray,     0,      BTN_RIGHT,  traymenu,       {0} },
+};
+
+static const Gesture gestures[] = {
+	// { MODKEY, SWIPE_LEFT, 4, shiftview, { .i = 1 } },
+	// { MODKEY, SWIPE_RIGHT, 4, shiftview, { .i = -1 } },
+	{ MODKEY, SWIPE_UP, 3, focusstack, {.i = 1} },
+	{ MODKEY, SWIPE_DOWN, 3, focusstack, {.i = -1} },
 };

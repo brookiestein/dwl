@@ -15,6 +15,7 @@ static const char *fonts[]                 = {"JetbrainsMono Nerd Font:size=13.5
 static const float rootcolor[]             = COLOR(0x000000ff);
 /* This conforms to the xdg-protocol. Set the alpha to zero to restore the old behavior */
 static const float fullscreen_bg[]         = {0.1f, 0.1f, 0.1f, 1.0f}; /* You can also use glsl colors */
+static const unsigned int swipe_min_threshold = 0;
 static uint32_t colors[][3]                = {
 	/*               fg          bg          border    */
 	[SchemeNorm] = { 0xbbbbbbff, 0x222222ff, 0x444444ff },
@@ -162,6 +163,8 @@ static const enum libinput_config_tap_button_map button_map = LIBINPUT_CONFIG_TA
 /* helper for spawning shell commands in the pre dwm-5.0 fashion */
 #define SHCMD(cmd) { .v = (const char*[]){ "/bin/sh", "-c", cmd, NULL } }
 
+#include "shiftview.c"
+
 /* commands */
 static const char *termcmd[] = { "emacsclient", "-c", "-n", "-e", "(my/vterm-in-current-frame)", NULL };
 static const char *menucmd[] = { "wmenu-run", "-l", "20", "-p", "Run:", NULL };
@@ -230,6 +233,8 @@ static const Key keys[] = {
 	{ MODKEY,                    XKB_KEY_l,          setmfact,       {.f = +0.05f} },
 	{ MODKEY,                    XKB_KEY_Return,     zoom,           {0} },
 	{ MODKEY,                    XKB_KEY_Tab,        view,           {0} },
+	{ MODKEY,                    XKB_KEY_a,          shiftview,      { .i = -1 } },
+	{ MODKEY,                    XKB_KEY_semicolon,  shiftview,      { .i = 1 } },
 	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_Q,          killclient,     {0} },
 	{ MODKEY,                    XKB_KEY_t,          setlayout,      {.v = &layouts[0]} },
 	{ MODKEY,                    XKB_KEY_f,          setlayout,      {.v = &layouts[1]} },
@@ -304,4 +309,11 @@ static const Button buttons[] = {
 	{ ClkTagBar,   MODKEY, BTN_RIGHT,  toggletag,      {0} },
 	{ ClkTray,     0,      BTN_LEFT,   trayactivate,   {0} },
 	{ ClkTray,     0,      BTN_RIGHT,  traymenu,       {0} },
+};
+
+static const Gesture gestures[] = {
+	{ MODKEY, SWIPE_LEFT, 4, shiftview, { .i = 1 } },
+	{ MODKEY, SWIPE_RIGHT, 4, shiftview, { .i = -1 } },
+	{ MODKEY, SWIPE_UP, 3, focusstack, {.i = 1} },
+	{ MODKEY, SWIPE_DOWN, 3, focusstack, {.i = -1} },
 };
