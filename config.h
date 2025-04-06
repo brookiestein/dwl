@@ -166,6 +166,7 @@ static const enum libinput_config_tap_button_map button_map = LIBINPUT_CONFIG_TA
 static const char *termcmd[] = { "emacsclient", "-c", "-n", "-e", "(my/vterm-in-current-frame)", NULL };
 static const char *menucmd[] = { "wmenu-run", "-l", "20", "-p", "Run:", NULL };
 static const char *dmenucmd[] = { "wmenu", NULL };
+static const char *emacsclient[] = { "emacsclient", "-c", "-n", NULL }; /* If I just want to open emacs, not a terminal inside it. */
 
 static const char *printscr[] = { "grim", "$(xdg-user-dir PICTURES)/Screenshot_$(date +%F_%T).png", NULL };
 static const char *printrect[] = { "slurp", "|", "grim", "-g", "-", "$(xdg-user-dir PICTURES)/Screenshot_$(date +%F_%T).png", NULL };
@@ -256,7 +257,7 @@ static const Key keys[] = {
 	TAGKEYS(          XKB_KEY_9, XKB_KEY_parenleft,                  8),
 	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_E,                     quit,   {0} },
 	{ MODKEY,		             XKB_KEY_w,		                spawn,	SHCMD("firefox") },
-	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_X,		                spawn,	SHCMD("emacs") },
+	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_X,		                spawn,	{.v = emacsclient} },
 	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_T,		                spawn,	SHCMD("telegram-desktop") },
 	{ MODKEY,                    XKB_KEY_q,                     spawn,  SHCMD("qtcreator") },
 	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_L,                     spawn,  {.v = locker} },
