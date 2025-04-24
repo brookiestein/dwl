@@ -24,7 +24,7 @@ static uint32_t colors[][3]                = {
 };
 static const int respect_monitor_reserved_area = 0;  /* 1 to monitor center while respecting the monitor's reserved area, 0 to monitor center */
 static const char *cursor_theme		   = "Adwaita";
-static const char cursor_size[]		   = "16";
+static const char cursor_size[]		   = "20";
 
 /* tagging - TAGCOUNT must be no greater than 31 */
 static char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
@@ -36,13 +36,14 @@ static int log_level = WLR_ERROR;
 
 /* Autostart */
 static const char *const autostart[] = {
-	 "wbg", "/home/brayan/Wallpapers/wallhaven-5g1868_1920x1080.png", NULL,
+	 "wbg", "/home/brayan/Wallpapers/wallhaven-k831om_1920x1080.png", NULL,
 	 "dbus-update-activation-environment", "--all", NULL,
 	 "gentoo-pipewire-launcher", "restart", NULL,
-	 "/usr/libexec/xdg-desktop-portal-wlr", NULL,
-	 "/usr/libexec/xdg-desktop-portal", NULL,
 	 "dunst", NULL,
 	 "emacs", "--daemon", NULL,
+	 "/usr/libexec/xdg-desktop-portal-wlr", NULL,
+	 "/usr/libexec/xdg-desktop-portal-gtk", NULL,
+	 "/usr/libexec/xdg-desktop-portal", NULL,
      NULL /* terminate */
 };
 
@@ -50,9 +51,8 @@ static const Env envs[] = {
 	/* variable			value */
 	{ "XDG_CURRENT_DESKTOP",	"wlroots" },
 	{ "MOZ_ENABLE_WAYLAND",		"1" },
-	{ "LD_LIBRARY_PATH",        "${LD_LIBRARY_PATH}:/usr/local/lib64" },
-	{ "CMAKE_PREFIX_PATH",      "${CMAKE_PREFIX_PATH}:/usr/local/lib64/cmake" },
-	{ "PKG_CONFIG_PATH",        "${PKG_CONFIG_PATH}:/usr/local/share/pkgconfig" },
+	{ "QT_QPA_PLATFORM",        "wayland" },
+	{ "QT_QPA_PLATFORMTHEME",   "qt6ct" }
 };
 
 /* NOTE: ALWAYS keep a rule declared even if you don't use rules (e.g leave at least one example) */
@@ -166,7 +166,8 @@ static const enum libinput_config_tap_button_map button_map = LIBINPUT_CONFIG_TA
 #include "shiftview.c"
 
 /* commands */
-static const char *termcmd[] = { "emacsclient", "-c", "-n", "-e", "(my/vterm-in-current-frame)", NULL };
+/* static const char *termcmd[] = { "emacsclient", "-c", "-n", "-e", "(my/vterm-in-current-frame)", NULL }; */
+static const char *termcmd[] = { "foot", NULL };
 static const char *menucmd[] = { "wmenu-run", "-l", "20", "-p", "Run:", NULL };
 static const char *dmenucmd[] = { "wmenu", NULL };
 static const char *emacsclient[] = { "emacsclient", "-c", "-n", NULL }; /* If I just want to open emacs, not a terminal inside it. */
